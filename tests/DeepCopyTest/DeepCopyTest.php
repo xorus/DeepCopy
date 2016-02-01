@@ -4,9 +4,12 @@ namespace DeepCopyTest;
 
 use DeepCopy\DeepCopy;
 use DeepCopy\Filter\Filter;
+use DeepCopy\Filter\ReplaceFilter;
 use DeepCopy\Matcher\PropertyMatcher;
+use DeepCopy\Matcher\PropertyTypeMatcher;
 use DeepCopy\TypeFilter\TypeFilter;
 use DeepCopy\TypeMatcher\TypeMatcher;
+use ReflectionProperty;
 
 /**
  * DeepCopyTest
@@ -139,8 +142,8 @@ class DeepCopyTest extends AbstractTestClass
         $filter = $this->getMockForAbstractClass('DeepCopy\Filter\Filter');
         $filter->expects($this->once())
             ->method('apply')
-            ->will($this->returnCallback(function($object, $property) {
-                        $object->$property = null;
+            ->will($this->returnCallback(function($object, ReflectionProperty $reflectionProperty) {
+                        $reflectionProperty->setValue($object, null);
                     }));
 
         $deepCopy = new DeepCopy();
@@ -164,7 +167,7 @@ class DeepCopyTest extends AbstractTestClass
         $filter = $this->getMockForAbstractClass('DeepCopy\Filter\Filter');
         $filter->expects($this->once())
             ->method('apply')
-            ->will($this->returnCallback(function($object, $property, $objectCopier) {
+            ->will($this->returnCallback(function($object, ReflectionProperty $reflectionProperty, $objectCopier) {
                     }));
 
         $deepCopy = new DeepCopy();
@@ -217,6 +220,19 @@ class DeepCopyTest extends AbstractTestClass
 
         $this->assertNull($new[2]);
         $this->assertNull($new[3]);
+    }
+
+    public function testPrivatePropertyOfParentObjectCopyWithFiltersAndMatchers()
+    {
+        $o = new E;
+        $o->setProperty1(new B);
+
+        $deepCopy = new DeepCopy();
+        $deepCopy->addFilter(new ReplaceFilter(function() {return 'foo';}), new PropertyTypeMatcher('DeepCopyTest\B'));
+
+        $new = $deepCopy->copy($o);
+
+        $this->assertSame('foo', $new->getProperty1());
     }
 }
 
